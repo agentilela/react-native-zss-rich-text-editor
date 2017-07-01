@@ -202,7 +202,6 @@ export default class RichTextEditor extends PureComponent<IProps, IState> {
           }
           break
         case messages.ZSS_INITIALIZED:
-          this.setPlatform()
           if (customCSS) {
             this.setCustomCSS(customCSS)
           }
@@ -456,6 +455,7 @@ export default class RichTextEditor extends PureComponent<IProps, IState> {
   hideTitle = () => this.sendAction(actions.hideTitle)
   init = () => {
     this.sendAction(actions.init)
+    this.setPlatform()
     if (this.props.footerHeight) {
       this.setFooterHeight()
     }

@@ -155,11 +155,9 @@ export default class RichTextToolbar extends PureComponent<IProps, IState> {
       : this.defaultRenderAction(action, selected)
 
   setSelectedItems = (selectedItems: string[]) =>
-    selectedItems !== this.state.selectedItems
-      ? this.setState({
-          selectedItems,
-        })
-      : undefined
+    this.setState({
+      selectedItems,
+    })
 
   render() {
     const { actions, style } = this.props
