@@ -1,4 +1,4 @@
 {
-      "*.ts": ["prettier", "lint", "git add" ],
-      "*.tsx": ["prettier", "lint", "git add" ],
+      "*.ts": ["prettier", "lint", "build", "git add" ],
+      "*.tsx": ["prettier", "lint", "build", "git add" ],
 }
