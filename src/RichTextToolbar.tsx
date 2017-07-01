@@ -1,10 +1,5 @@
 import React, { PureComponent } from 'react'
-import {
-  Image,
-  StyleSheet,
-  TouchableOpacity,
-  VirtualizedList,
-} from 'react-native'
+import { FlatList, Image, StyleSheet, TouchableOpacity } from 'react-native'
 import { actions } from './const'
 import RichTextEditor from './RichTextEditor'
 
@@ -201,7 +196,7 @@ export default class RichTextToolbar extends PureComponent<IProps, IState> {
     const { selectedItems } = this.state
     const data = this.getRows(actions || defaultActions, selectedItems)
     return (
-      <VirtualizedList
+      <FlatList
         contentContainerStyle={[styles.listContainer, this.props.style]}
         data={data}
         horizontal
