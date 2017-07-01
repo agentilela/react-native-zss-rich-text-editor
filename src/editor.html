@@ -874,7 +874,6 @@
 			}
 
 			zss_editor.init = function() {
-      			window.postMessage(JSON.stringify({type:'INIT_ACTION_RECIEVED'}))
 
 				disableLineBreakIfNecessary('zss_editor_title');
 				disableLineBreakIfNecessary('zss_editor_content');
@@ -917,9 +916,12 @@
 
 				whenPastingInsertAsPlainText('zss_editor_title');
 				whenPastingInsertAsPlainText('zss_editor_content');
-				
-				window.postMessage(JSON.stringify({type: 'ZSS_INITIALIZED'}))
-				
+
+				zss_editor.focusTitle();
+
+				setTimeout(function() {
+					window.postMessage(JSON.stringify({type: 'ZSS_INITIALIZED'}))
+				}, 20);
 
 			}//end
 
@@ -929,10 +931,7 @@
 					type: 'SELECTED_TEXT_CHANGED'
 				});
 
-				if (selectedTextChangeMessage !== zss_editor.previousSelectedTextChangeMessage) {
-					window.postMessage(selectedTextChangeMessage);
-					zss_editor.previousSelectedTextChangeMessage = selectedTextChangeMessage;
-				}
+				window.postMessage(selectedTextChangeMessage);
 			}
 
 			function whenPastingInsertAsPlainText(editorId) {

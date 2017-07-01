@@ -1,10 +1,8 @@
 import React, { PureComponent } from 'react'
 import { FlatList, Image, TouchableOpacity } from 'react-native'
-import { actions as stringActions } from './const'
+import { actions as webviewActions } from './const'
 import RichTextEditor from './RichTextEditor'
 import { ToolbarStyles as styles } from './styles'
-
-const webviewActions = JSON.parse(stringActions)
 
 const defaultActions = [
   webviewActions.insertImage,
@@ -42,7 +40,6 @@ interface IProps {
 interface IState {
   editor?: RichTextEditor
   selectedItems: string[]
-  actions: string[]
 }
 
 interface IToolbarItem {
@@ -55,12 +52,11 @@ const keyExtractor = (item: IToolbarItem, index: number) => item.action
 
 // Component
 export default class RichTextToolbar extends PureComponent<IProps, IState> {
-  constructor(props: IProps) {
-    super(props)
+  constructor() {
+    super()
     this.state = {
       editor: undefined,
       selectedItems: [],
-      actions: props.actions ? props.actions : defaultActions,
     }
   }
 

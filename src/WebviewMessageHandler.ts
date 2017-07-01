@@ -2,8 +2,8 @@ import { actions, messages } from './const'
 export const InjectedMessageHandler = `
     document.addEventListener("message", function(event) {
 
-      const actions = ${actions};
-      const messages = ${messages};
+      const actions = ${JSON.stringify(actions)};
+      const messages = ${JSON.stringify(messages)};
       const action = JSON.parse(event.data);
 
       switch(action.type) {

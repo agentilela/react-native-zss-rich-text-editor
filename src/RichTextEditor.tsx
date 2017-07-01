@@ -14,12 +14,9 @@ import {
   WebViewMessageEventData,
   WebViewStatic,
 } from 'react-native'
-import { actions as stringActions, messages as stringMessages } from './const'
+import { actions, messages } from './const'
 import { EditorStyles as styles } from './styles'
 import { InjectedMessageHandler } from './WebviewMessageHandler'
-
-const actions = JSON.parse(stringActions)
-const messages = JSON.parse(stringMessages)
 
 // Types
 interface IProps {

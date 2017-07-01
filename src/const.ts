@@ -1,4 +1,4 @@
-export const actions = JSON.stringify({
+export const actions = {
   enableOnChange: 'ENABLE_ON_CHANGE',
   setTitleHtml: 'SET_TITLE_HTML',
   setContentHtml: 'SET_CONTENT_HTML',
@@ -52,9 +52,9 @@ export const actions = JSON.stringify({
   setEditorHeight: 'SET_EDITOR_HEIGHT',
   setFooterHeight: 'SET_FOOTER_HEIGHT',
   setPlatform: 'SET_PLATFORM',
-})
+}
 
-export const messages = JSON.stringify({
+export const messages = {
   TITLE_HTML_RESPONSE: 'TITLE_HTML_RESPONSE',
   TITLE_TEXT_RESPONSE: 'TITLE_TEXT_RESPONSE',
   CONTENT_HTML_RESPONSE: 'CONTENT_HTML_RESPONSE',
@@ -68,4 +68,4 @@ export const messages = JSON.stringify({
   SELECTED_TEXT_RESPONSE: 'SELECTED_TEXT_RESPONSE',
   LINK_TOUCHED: 'LINK_TOUCHED',
   SELECTED_TEXT_CHANGED: 'SELECTED_TEXT_CHANGED',
-})
+}
