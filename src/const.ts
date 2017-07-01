@@ -1,4 +1,4 @@
-export const actions = {
+export const actions = JSON.stringify({
   enableOnChange: 'ENABLE_ON_CHANGE',
   setTitleHtml: 'SET_TITLE_HTML',
   setContentHtml: 'SET_CONTENT_HTML',
@@ -13,7 +13,6 @@ export const actions = {
   blurContentEditor: 'BLUR_CONTENT_EDITOR',
   focusTitle: 'FOCUS_TITLE',
   focusContent: 'FOCUS_CONTENT',
-
   setBold: 'bold',
   setItalic: 'italic',
   setUnderline: 'underline',
@@ -52,11 +51,10 @@ export const actions = {
   init: 'ZSSS_INIT',
   setEditorHeight: 'SET_EDITOR_HEIGHT',
   setFooterHeight: 'SET_FOOTER_HEIGHT',
-  setPlatform: 'SET_PLATFORM'
-};
+  setPlatform: 'SET_PLATFORM',
+})
 
-
-export const messages = {
+export const messages = JSON.stringify({
   TITLE_HTML_RESPONSE: 'TITLE_HTML_RESPONSE',
   TITLE_TEXT_RESPONSE: 'TITLE_TEXT_RESPONSE',
   CONTENT_HTML_RESPONSE: 'CONTENT_HTML_RESPONSE',
@@ -69,5 +67,5 @@ export const messages = {
   CONTENT_CHANGE: 'CONTENT_CHANGE',
   SELECTED_TEXT_RESPONSE: 'SELECTED_TEXT_RESPONSE',
   LINK_TOUCHED: 'LINK_TOUCHED',
-  SELECTED_TEXT_CHANGED: 'SELECTED_TEXT_CHANGED'
-};
+  SELECTED_TEXT_CHANGED: 'SELECTED_TEXT_CHANGED',
+})

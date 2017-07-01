@@ -1,24 +1,27 @@
 import React, { PureComponent } from 'react'
-import { FlatList, Image, StyleSheet, TouchableOpacity } from 'react-native'
-import { actions } from './const'
+import { FlatList, Image, TouchableOpacity } from 'react-native'
+import { actions as stringActions } from './const'
 import RichTextEditor from './RichTextEditor'
+import { ToolbarStyles as styles } from './styles'
+
+const webviewActions = JSON.parse(stringActions)
 
 const defaultActions = [
-  actions.insertImage,
-  actions.setBold,
-  actions.setItalic,
-  actions.insertBulletsList,
-  actions.insertOrderedList,
-  actions.insertLink,
+  webviewActions.insertImage,
+  webviewActions.setBold,
+  webviewActions.setItalic,
+  webviewActions.insertBulletsList,
+  webviewActions.insertOrderedList,
+  webviewActions.insertLink,
 ]
 
 const getDefaultIcon = () => ({
-  [actions.insertImage]: require('../img/icon_format_media.png'),
-  [actions.setBold]: require('../img/icon_format_bold.png'),
-  [actions.setItalic]: require('../img/icon_format_italic.png'),
-  [actions.insertBulletsList]: require('../img/icon_format_ul.png'),
-  [actions.insertOrderedList]: require('../img/icon_format_ol.png'),
-  [actions.insertLink]: require('../img/icon_format_link.png'),
+  [webviewActions.insertImage]: require('../img/icon_format_media.png'),
+  [webviewActions.setBold]: require('../img/icon_format_bold.png'),
+  [webviewActions.setItalic]: require('../img/icon_format_italic.png'),
+  [webviewActions.insertBulletsList]: require('../img/icon_format_ul.png'),
+  [webviewActions.insertOrderedList]: require('../img/icon_format_ol.png'),
+  [webviewActions.insertLink]: require('../img/icon_format_link.png'),
 })
 
 // Types
@@ -41,6 +44,14 @@ interface IState {
   selectedItems: string[]
   actions: string[]
 }
+
+interface IToolbarItem {
+  action: string
+  selected: boolean
+}
+
+// Helpers
+const keyExtractor = (item: IToolbarItem, index: number) => item.action
 
 // Component
 export default class RichTextToolbar extends PureComponent<IProps, IState> {
@@ -65,31 +76,41 @@ export default class RichTextToolbar extends PureComponent<IProps, IState> {
     }
   }
 
-  getRows = (actions: string[], selectedItems: string[]) =>
-    actions.map(action => {
-      return { action, selected: selectedItems.includes(action) }
-    })
-
-  setSelectedItems = (selectedItems: string[]) =>
-    selectedItems !== this.state.selectedItems
-      ? this.setState({
-          selectedItems,
-        })
-      : undefined
-
-  getButtonSelectedStyle = () =>
-    this.props.selectedButtonStyle
-      ? this.props.selectedButtonStyle
-      : styles.defaultSelectedButton
-
-  getButtonUnselectedStyle = () =>
-    this.props.unselectedButtonStyle
-      ? this.props.unselectedButtonStyle
-      : styles.defaultUnselectedButton
+  defaultRenderAction = (action: string, selected: boolean) => {
+    const {
+      iconTint,
+      selectedIconTint,
+      selectedButtonStyle,
+      unselectedButtonStyle,
+    } = this.props
+    const icon = this.getButtonIcon(action)
+    const handlePressAction = () => this.handlePressAction(action)
+    return (
+      <TouchableOpacity
+        key={action}
+        style={
+          selected
+            ? [styles.selectedButton, selectedButtonStyle]
+            : [styles.unselectedButton, unselectedButtonStyle]
+        }
+        onPress={handlePressAction}
+      >
+        {icon
+          ? <Image
+              source={icon}
+              style={{
+                tintColor: selected ? selectedIconTint : iconTint,
+              }}
+            />
+          : null}
+      </TouchableOpacity>
+    )
+  }
 
   getButtonIcon = (action: string) => {
-    if (this.props.iconMap && this.props.iconMap[action]) {
-      return this.props.iconMap[action]
+    const { iconMap } = this.props
+    if (iconMap && iconMap[action]) {
+      return iconMap[action]
     }
     const defaultIcon = getDefaultIcon()[action]
     if (defaultIcon) {
@@ -98,123 +119,64 @@ export default class RichTextToolbar extends PureComponent<IProps, IState> {
     return undefined
   }
 
-  defaultRenderAction = (action: string, selected: boolean) => {
-    const icon = this.getButtonIcon(action)
-    const handlePressAction = () => this.handlePressAction(action)
-    return (
-      <TouchableOpacity
-        key={action}
-        style={[
-          { height: 50, width: 50, justifyContent: 'center' },
-          selected
-            ? this.getButtonSelectedStyle()
-            : this.getButtonUnselectedStyle(),
-        ]}
-        onPress={handlePressAction}
-      >
-        {icon
-          ? <Image
-              source={icon}
-              style={{
-                tintColor: selected
-                  ? this.props.selectedIconTint
-                  : this.props.iconTint,
-              }}
-            />
-          : null}
-      </TouchableOpacity>
-    )
-  }
-
-  renderAction = (action: string, selected: boolean) =>
-    this.props.renderAction
-      ? this.props.renderAction(action, selected)
-      : this.defaultRenderAction(action, selected)
+  getRows = (actions: string[], selectedItems: string[]) =>
+    actions.map(action => {
+      return { action, selected: selectedItems.includes(action) }
+    })
 
   handlePressAction = (action: string) => {
+    const { onPressAddImage, onPressAddLink } = this.props
     const { editor } = this.state
     if (!editor) {
       return
     }
     switch (action) {
-      case actions.setBold:
-      case actions.setItalic:
-      case actions.insertBulletsList:
-      case actions.insertOrderedList:
-      case actions.setUnderline:
-      case actions.heading1:
-      case actions.heading2:
-      case actions.heading3:
-      case actions.heading4:
-      case actions.heading5:
-      case actions.heading6:
-      case actions.setParagraph:
-      case actions.removeFormat:
-      case actions.alignLeft:
-      case actions.alignCenter:
-      case actions.alignRight:
-      case actions.alignFull:
-      case actions.setSubscript:
-      case actions.setSuperscript:
-      case actions.setStrikethrough:
-      case actions.setHR:
-      case actions.setIndent:
-      case actions.setOutdent:
-        editor.sendAction(action)
-        break
-      case actions.insertLink:
+      case webviewActions.insertLink:
         editor.prepareInsert()
-        if (this.props.onPressAddLink) {
-          this.props.onPressAddLink()
+        if (onPressAddLink) {
+          onPressAddLink()
         } else {
           editor.getSelectedText().then((selectedText: string) => {
             editor.showLinkDialog(selectedText)
           })
         }
         break
-      case actions.insertImage:
+      case webviewActions.insertImage:
         editor.prepareInsert()
-        if (this.props.onPressAddImage) {
-          this.props.onPressAddImage()
+        if (onPressAddImage) {
+          onPressAddImage()
         }
         break
       default:
+        editor.sendAction(action)
         return
     }
   }
 
-  renderItem = ({
-    item,
-    index,
-  }: {
-    item: { action: string; selected: boolean }
-    index: number
-  }) => this.renderAction(item.action, item.selected)
+  renderItem = ({ item: { action, selected } }: { item: IToolbarItem }) =>
+    this.props.renderAction
+      ? this.props.renderAction(action, selected)
+      : this.defaultRenderAction(action, selected)
+
+  setSelectedItems = (selectedItems: string[]) =>
+    selectedItems !== this.state.selectedItems
+      ? this.setState({
+          selectedItems,
+        })
+      : undefined
 
   render() {
-    const { actions } = this.props
+    const { actions, style } = this.props
     const { selectedItems } = this.state
     const data = this.getRows(actions || defaultActions, selectedItems)
     return (
       <FlatList
-        contentContainerStyle={[styles.listContainer, this.props.style]}
+        contentContainerStyle={[styles.listContainer, style]}
         data={data}
         horizontal
+        keyExtractor={keyExtractor}
         renderItem={this.renderItem}
       />
     )
   }
 }
-
-const styles = StyleSheet.create({
-  defaultSelectedButton: {
-    backgroundColor: 'red',
-  },
-  defaultUnselectedButton: {},
-  listContainer: {
-    height: 50,
-    backgroundColor: '#D3D3D3',
-    alignItems: 'center',
-    flexDirection: 'row',
-  },
-})

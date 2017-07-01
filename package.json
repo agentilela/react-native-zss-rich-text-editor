@@ -13,9 +13,7 @@
   "description": "React Native Wrapper for ZSSRichTextEditor",
   "main": "index.js",
   "license": "SEE LICENSE IN LICENSE",
-  "dependencies": {
-    "react-native-webview-bridge-updated": "^1.0.0"
-  },
+  "dependencies": {},
   "peerDependencies": {
     "react": "16.0.0-alpha.12",
     "react-native": ">=0.31.0"

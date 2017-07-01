@@ -4,25 +4,22 @@ import {
   EmitterSubscription,
   Keyboard,
   Modal,
-  PixelRatio,
+  NativeSyntheticEvent,
   Platform,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
+  WebView,
+  WebViewMessageEventData,
+  WebViewStatic,
 } from 'react-native'
-import WebViewBridge from 'react-native-webview-bridge-updated'
-import { actions, messages } from './const'
+import { actions as stringActions, messages as stringMessages } from './const'
+import { EditorStyles as styles } from './styles'
 import { InjectedMessageHandler } from './WebviewMessageHandler'
 
-const injectScript = `
-  (function () {
-    ${InjectedMessageHandler}
-  }());
-`
-
-const PlatformIOS = Platform.OS === 'ios'
+const actions = JSON.parse(stringActions)
+const messages = JSON.parse(stringMessages)
 
 // Types
 interface IProps {
@@ -55,7 +52,23 @@ interface IKeyboardEvent {
   }
 }
 
+type BridgeMessage = NativeSyntheticEvent<WebViewMessageEventData>
+
+// Helpers
+const injectScript = `
+  (function () {
+    ${InjectedMessageHandler}
+  }());
+`
+
+const PlatformIOS = Platform.OS === 'ios'
+
+const upperCaseButtonTextIfNeeded = (buttonText: string) =>
+  PlatformIOS ? buttonText : buttonText.toUpperCase()
+
+// Component
 export default class RichTextEditor extends PureComponent<IProps, IState> {
+  // Event Listeners
   _keyboardEventListeners: EmitterSubscription[]
   _selectedTextChangeListeners: ((text: string) => void)[]
 
@@ -80,7 +93,7 @@ export default class RichTextEditor extends PureComponent<IProps, IState> {
   titleTextResolve?: (value?: string) => void
 
   // Refs
-  webviewBridge: typeof WebViewBridge
+  webviewBridge: WebViewStatic
 
   constructor(props: IProps) {
     super(props)
@@ -115,40 +128,23 @@ export default class RichTextEditor extends PureComponent<IProps, IState> {
     )
   }
 
-  captureWebviewRef = (c: typeof WebViewBridge) => (this.webviewBridge = c)
+  captureWebviewRef = (c: WebViewStatic) => (this.webviewBridge = c)
+
+  handleKeyboardWillHide = (event: IKeyboardEvent) =>
+    this.setState({ keyboardHeight: 0 })
 
   handleKeyboardWillShow = (event: IKeyboardEvent) => {
     const newKeyboardHeight = event.endCoordinates.height
     if (this.state.keyboardHeight === newKeyboardHeight) {
       return
     }
-    if (newKeyboardHeight) {
+    return this.setState({ keyboardHeight: newKeyboardHeight }, () =>
       this.setEditorAvailableHeightBasedOnKeyboardHeight(newKeyboardHeight)
-    }
-    this.setState({ keyboardHeight: newKeyboardHeight })
+    )
   }
 
-  handleKeyboardWillHide = (event: IKeyboardEvent) =>
-    this.setState({ keyboardHeight: 0 })
-
-  setEditorAvailableHeightBasedOnKeyboardHeight = (keyboardHeight: number) => {
-    const { contentInset, style } = this.props
-    let spacing = 0
-    if (contentInset) {
-      const { top, bottom } = contentInset
-      spacing += (top || 0) + (bottom || 0)
-    }
-    if (style) {
-      const { marginTop, marginBottom } = style
-      spacing += (marginTop || 0) + (marginBottom || 0)
-    }
-
-    const editorAvailableHeight =
-      Dimensions.get('window').height - keyboardHeight - spacing
-    this.setEditorHeight(editorAvailableHeight)
-  }
-
-  onBridgeMessage(str: string) {
+  onBridgeMessage = (incomingMessage: BridgeMessage) => {
+    const { data } = incomingMessage.nativeEvent
     const {
       customCSS,
       contentPlaceholder,
@@ -159,8 +155,9 @@ export default class RichTextEditor extends PureComponent<IProps, IState> {
       initialTitleHTML,
       titlePlaceholder,
     } = this.props
+    const { onChange, selectionChangeListeners } = this.state
     try {
-      const message = JSON.parse(str)
+      const message = JSON.parse(data)
 
       switch (message.type) {
         case messages.TITLE_HTML_RESPONSE:
@@ -208,6 +205,7 @@ export default class RichTextEditor extends PureComponent<IProps, IState> {
           }
           break
         case messages.ZSS_INITIALIZED:
+          this.setPlatform()
           if (customCSS) {
             this.setCustomCSS(customCSS)
           }
@@ -241,14 +239,9 @@ export default class RichTextEditor extends PureComponent<IProps, IState> {
 
           break
         case messages.LINK_TOUCHED:
-          this.prepareInsert()
           const { title, url } = message.data
+          this.prepareInsert()
           this.showLinkDialog(title, url)
-          break
-        case messages.SCROLL:
-          this.webviewBridge.setNativeProps({
-            contentOffset: { y: message.data },
-          })
           break
         case messages.TITLE_FOCUSED:
           if (this.titleFocusHandler) {
@@ -262,14 +255,14 @@ export default class RichTextEditor extends PureComponent<IProps, IState> {
           break
         case messages.SELECTION_CHANGE: {
           const items = message.data.items
-          this.state.selectionChangeListeners.map(listener => {
+          selectionChangeListeners.map(listener => {
             listener(items)
           })
           break
         }
         case messages.CONTENT_CHANGE: {
           const content = message.data.content
-          this.state.onChange.map(listener => listener(content))
+          onChange.map(listener => listener(content))
           break
         }
         case messages.SELECTED_TEXT_CHANGED: {
@@ -292,12 +285,12 @@ export default class RichTextEditor extends PureComponent<IProps, IState> {
   handleSetLinkTitle = (linkTitle: string) => this.setState({ linkTitle })
   handleSetLinkUrl = (linkUrl: string) => this.setState({ linkUrl })
 
-  renderLinkModal() {
+  renderLinkModal = () => {
     const { keyboardHeight, linkTitle, linkUrl, showLinkDialog } = this.state
     const modalButtons = this.renderModalButtons()
     return (
       <Modal
-        animationType={'fade'}
+        animationType="fade"
         onRequestClose={this.handleCloseLinkDialog}
         transparent
         visible={showLinkDialog}
@@ -317,24 +310,25 @@ export default class RichTextEditor extends PureComponent<IProps, IState> {
                 value={linkTitle}
               />
             </View>
-            <Text style={[styles.inputTitle, { marginTop: 10 }]}>URL</Text>
+            <Text style={[styles.inputURL]}>URL</Text>
             <View style={styles.inputWrapper}>
               <TextInput
-                style={styles.input}
-                onChangeText={this.handleSetLinkUrl}
-                value={linkUrl}
-                keyboardType="url"
                 autoCapitalize="none"
                 autoCorrect={false}
+                keyboardType="url"
+                onChangeText={this.handleSetLinkUrl}
+                style={styles.input}
+                value={linkUrl}
               />
             </View>
-            {PlatformIOS && <View style={styles.lineSeparator} />}
+            {PlatformIOS ? <View style={styles.lineSeparator} /> : null}
             {modalButtons}
           </View>
         </View>
       </Modal>
     )
   }
+
   handleInsertLink = () => {
     const { linkUrl, linkTitle } = this.state
     this.linkIsNew()
@@ -343,47 +337,40 @@ export default class RichTextEditor extends PureComponent<IProps, IState> {
     return this.hideModal()
   }
 
-  hideModal() {
+  hideModal = () =>
     this.setState({
       showLinkDialog: false,
       linkInitialUrl: '',
       linkTitle: '',
       linkUrl: '',
     })
-  }
 
-  renderModalButtons() {
+  linkIsNew = () => !this.state.linkInitialUrl
+
+  renderModalButtons = () => {
     const { linkTitle, linkUrl } = this.state
     const insertUpdateDisabled =
       linkTitle.trim().length <= 0 || linkUrl.trim().length <= 0
-    const containerPlatformStyle = PlatformIOS
-      ? { justifyContent: 'space-between' }
-      : { paddingTop: 15 }
-    const buttonPlatformStyle = PlatformIOS
-      ? { flex: 1, height: 45, justifyContent: 'center' }
-      : {}
     return (
-      <View
-        style={[
-          { alignSelf: 'stretch', flexDirection: 'row' },
-          containerPlatformStyle,
-        ]}
-      >
+      <View style={styles.containerPlatformStyle}>
         {!PlatformIOS && <View style={{ flex: 1 }} />}
-        <TouchableOpacity onPress={this.hideModal} style={buttonPlatformStyle}>
+        <TouchableOpacity
+          onPress={this.hideModal}
+          style={styles.buttonPlatformStyle}
+        >
           <Text style={[styles.button, { paddingRight: 10 }]}>
-            {this.upperCaseButtonTextIfNeeded('Cancel')}
+            {upperCaseButtonTextIfNeeded('Cancel')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={this.handleInsertLink}
           disabled={insertUpdateDisabled}
-          style={buttonPlatformStyle}
+          style={styles.buttonPlatformStyle}
         >
           <Text
             style={[styles.button, { opacity: insertUpdateDisabled ? 0.5 : 1 }]}
           >
-            {this.upperCaseButtonTextIfNeeded(
+            {upperCaseButtonTextIfNeeded(
               this.linkIsNew() ? 'Insert' : 'Update'
             )}
           </Text>
@@ -392,65 +379,55 @@ export default class RichTextEditor extends PureComponent<IProps, IState> {
     )
   }
 
-  linkIsNew = () => !this.state.linkInitialUrl
+  sendAction = (action: string, data?: string | number | {}) =>
+    this.webviewBridge.postMessage(JSON.stringify({ type: action, data }))
 
-  upperCaseButtonTextIfNeeded = (buttonText: string) =>
-    PlatformIOS ? buttonText : buttonText.toUpperCase()
+  setEditorAvailableHeightBasedOnKeyboardHeight = (keyboardHeight: number) => {
+    const { contentInset, style } = this.props
+    let spacing = 0
+    if (contentInset) {
+      const { top, bottom } = contentInset
+      spacing += (top || 0) + (bottom || 0)
+    }
+    if (style) {
+      const { marginTop, marginBottom } = style
+      spacing += (marginTop || 0) + (marginBottom || 0)
+    }
+
+    this.setEditorHeight(
+      Dimensions.get('window').height - keyboardHeight - spacing
+    )
+  }
 
   render() {
     //in release build, external html files in Android can't be required, so they must be placed in the assets folder and accessed via uri
     const pageSource = PlatformIOS
       ? require('./editor.html')
       : { uri: 'file:///android_asset/editor.html' }
+    const linkModal = this.renderLinkModal()
     return (
-      <View style={{ flex: 1 }}>
-        <WebViewBridge
-          {...this.props}
-          hideKeyboardAccessoryView={true}
-          keyboardDisplayRequiresUserAction={false}
-          ref={this.captureWebviewRef}
-          onBridgeMessage={this.onBridgeMessage}
+      <View style={styles.editorContainer}>
+        <WebView
+          javaScriptEnabled
           injectedJavaScript={injectScript}
-          source={pageSource}
           onLoad={this.init}
+          onMessage={this.onBridgeMessage}
+          ref={this.captureWebviewRef}
+          source={pageSource}
+          {...this.props}
         />
-        {this.renderLinkModal()}
+        {linkModal}
       </View>
     )
   }
 
-  escapeJSONString = (text: string) =>
-    text
-      .replace(/[\\]/g, '\\\\')
-      .replace(/[\"]/g, '\\"')
-      .replace(/[\']/g, "\\'")
-      .replace(/[\/]/g, '\\/')
-      .replace(/[\b]/g, '\\b')
-      .replace(/[\f]/g, '\\f')
-      .replace(/[\n]/g, '\\n')
-      .replace(/[\r]/g, '\\r')
-      .replace(/[\t]/g, '\\t')
-
-  sendAction = (action: string, data?: string | number | {}) => {
-    const jsonString = JSON.stringify({ type: action, data })
-    this.webviewBridge.sendToBridge(this.escapeJSONString(jsonString))
-  }
-
   //-------------------------------------------------------------------------------
-  //--------------- Public API
+  // Public API
+  //-------------------------------------------------------------------------------
 
-  showLinkDialog = (optionalTitle: string = '', optionalUrl: string = '') =>
-    this.setState({
-      linkInitialUrl: optionalUrl,
-      linkTitle: optionalTitle,
-      linkUrl: optionalUrl,
-      showLinkDialog: true,
-    })
-
-  focusTitle = () => this.sendAction(actions.focusTitle)
-
-  focusContent = () => this.sendAction(actions.focusContent)
-
+  // Event Listeners
+  addSelectedTextChangeListener = (listener: () => void) =>
+    this._selectedTextChangeListeners.push(listener)
   registerToolbar = (listener: (selectedItems: string[]) => void) =>
     this.setState({
       selectionChangeListeners: [
@@ -458,53 +435,45 @@ export default class RichTextEditor extends PureComponent<IProps, IState> {
         listener,
       ],
     })
-
-  enableOnChange = () => this.sendAction(actions.enableOnChange)
-
   registerContentChangeListener = (listener: () => void) =>
     this.setState({
       onChange: [...this.state.onChange, listener],
     })
 
-  setTitleHTML = (html: string) => this.sendAction(actions.setTitleHtml, html)
-  hideTitle = () => this.sendAction(actions.hideTitle)
-  showTitle = () => this.sendAction(actions.showTitle)
-  toggleTitle = () => this.sendAction(actions.toggleTitle)
-  setContentHTML = (html: string) =>
-    this.sendAction(actions.setContentHtml, html)
-  blurTitleEditor = () => this.sendAction(actions.blurTitleEditor)
+  // Webview Message Handlers
+  alignCenter = () => this.sendAction(actions.alignCenter)
+  alignFull = () => this.sendAction(actions.alignFull)
+  alignLeft = () => this.sendAction(actions.alignLeft)
+  alignRight = () => this.sendAction(actions.alignRight)
   blurContentEditor = () => this.sendAction(actions.blurContentEditor)
-  setBold = () => this.sendAction(actions.setBold)
-  setItalic = () => this.sendAction(actions.setItalic)
-  setUnderline = () => this.sendAction(actions.setUnderline)
+  blurTitleEditor = () => this.sendAction(actions.blurTitleEditor)
+  enableOnChange = () => this.sendAction(actions.enableOnChange)
+  focusTitle = () => this.sendAction(actions.focusTitle)
+  focusContent = () => this.sendAction(actions.focusContent)
   heading1 = () => this.sendAction(actions.heading1)
   heading2 = () => this.sendAction(actions.heading2)
   heading3 = () => this.sendAction(actions.heading3)
   heading4 = () => this.sendAction(actions.heading4)
   heading5 = () => this.sendAction(actions.heading5)
   heading6 = () => this.sendAction(actions.heading6)
-  setParagraph = () => this.sendAction(actions.setParagraph)
-  removeFormat = () => this.sendAction(actions.removeFormat)
-  alignLeft = () => this.sendAction(actions.alignLeft)
-  alignCenter = () => this.sendAction(actions.alignCenter)
-  alignRight = () => this.sendAction(actions.alignRight)
-  alignFull = () => this.sendAction(actions.alignFull)
+  hideTitle = () => this.sendAction(actions.hideTitle)
+  init = () => {
+    this.sendAction(actions.init)
+    if (this.props.footerHeight) {
+      this.setFooterHeight()
+    }
+  }
   insertBulletsList = () => this.sendAction(actions.insertBulletsList)
-  insertOrderedList = () => this.sendAction(actions.insertOrderedList)
-  insertLink = (url: string, title: string) =>
-    this.sendAction(actions.insertLink, { url, title })
-  updateLink = (url: string, title: string) =>
-    this.sendAction(actions.updateLink, { url, title })
   insertImage = (attributes: string) => {
     this.sendAction(actions.insertImage, attributes)
     this.prepareInsert() //This must be called BEFORE insertImage. But WebViewBridge uses a stack :/
   }
-  setSubscript = () => this.sendAction(actions.setSubscript)
-  setSuperscript = () => this.sendAction(actions.setSuperscript)
-  setStrikethrough = () => this.sendAction(actions.setStrikethrough)
-  setHR = () => this.sendAction(actions.setHR)
-  setIndent = () => this.sendAction(actions.setIndent)
-  setOutdent = () => this.sendAction(actions.setOutdent)
+  insertLink = (url: string, title: string) =>
+    this.sendAction(actions.insertLink, { url, title })
+  insertOrderedList = () => this.sendAction(actions.insertOrderedList)
+  prepareInsert = () => this.sendAction(actions.prepareInsert)
+  removeFormat = () => this.sendAction(actions.removeFormat)
+  restoreSelection = () => this.sendAction(actions.restoreSelection)
   setBackgroundColor = (color: string) =>
     this.sendAction(actions.setBackgroundColor, color)
   setTextColor = (color: string) => this.sendAction(actions.setTextColor, color)
@@ -513,24 +482,62 @@ export default class RichTextEditor extends PureComponent<IProps, IState> {
   setContentPlaceholder = (placeholder: string) =>
     this.sendAction(actions.setContentPlaceholder, placeholder)
   setCustomCSS = (css: string) => this.sendAction(actions.setCustomCSS, css)
-  prepareInsert = () => this.sendAction(actions.prepareInsert)
-  restoreSelection = () => this.sendAction(actions.restoreSelection)
-  init = () => {
-    this.sendAction(actions.init)
-    this.setPlatform()
-    if (this.props.footerHeight) {
-      this.setFooterHeight()
-    }
+  setBold = () => this.sendAction(actions.setBold)
+  setContentFocusHandler = (callbackHandler: () => void) => {
+    this.contentFocusHandler = callbackHandler
+    return this.sendAction(actions.setContentFocusHandler)
   }
-
+  setContentHTML = (html: string) =>
+    this.sendAction(actions.setContentHtml, html)
   setEditorHeight = (height: number) =>
     this.sendAction(actions.setEditorHeight, height)
-
   setFooterHeight = () =>
     this.sendAction(actions.setFooterHeight, this.props.footerHeight)
-
   setPlatform = () => this.sendAction(actions.setPlatform, Platform.OS)
+  setHR = () => this.sendAction(actions.setHR)
+  setIndent = () => this.sendAction(actions.setIndent)
+  setItalic = () => this.sendAction(actions.setItalic)
+  setOutdent = () => this.sendAction(actions.setOutdent)
+  setParagraph = () => this.sendAction(actions.setParagraph)
+  setStrikethrough = () => this.sendAction(actions.setStrikethrough)
+  setSubscript = () => this.sendAction(actions.setSubscript)
+  setSuperscript = () => this.sendAction(actions.setSuperscript)
+  setTitleFocusHandler = (callbackHandler: () => void) => {
+    this.titleFocusHandler = callbackHandler
+    return this.sendAction(actions.setTitleFocusHandler)
+  }
+  setTitleHTML = (html: string) => this.sendAction(actions.setTitleHtml, html)
+  setUnderline = () => this.sendAction(actions.setUnderline)
+  showTitle = () => this.sendAction(actions.showTitle)
+  toggleTitle = () => this.sendAction(actions.toggleTitle)
+  updateLink = (url: string, title: string) =>
+    this.sendAction(actions.updateLink, { url, title })
 
+  // Async Actions
+  getContentHtml = () =>
+    new Promise((resolve, reject) => {
+      this.contentResolve = resolve
+      this.contentReject = reject
+      this.sendAction(actions.getContentHtml)
+
+      this.pendingContentHtml = setTimeout(() => {
+        if (this.contentReject) {
+          this.contentReject('timeout')
+        }
+      }, 5000)
+    })
+  getSelectedText = () =>
+    new Promise((resolve, reject) => {
+      this.selectedTextResolve = resolve
+      this.selectedTextReject = reject
+      this.sendAction(actions.getSelectedText)
+
+      this.pendingSelectedText = setTimeout(() => {
+        if (this.selectedTextReject) {
+          this.selectedTextReject('timeout')
+        }
+      }, 5000)
+    })
   getTitleHtml = () =>
     new Promise((resolve, reject) => {
       this.titleResolve = resolve
@@ -543,7 +550,6 @@ export default class RichTextEditor extends PureComponent<IProps, IState> {
         }
       }, 5000)
     })
-
   getTitleText = () =>
     new Promise((resolve, reject) => {
       this.titleTextResolve = resolve
@@ -557,86 +563,12 @@ export default class RichTextEditor extends PureComponent<IProps, IState> {
       }, 5000)
     })
 
-  getContentHtml = () =>
-    new Promise((resolve, reject) => {
-      this.contentResolve = resolve
-      this.contentReject = reject
-      this.sendAction(actions.getContentHtml)
-
-      this.pendingContentHtml = setTimeout(() => {
-        if (this.contentReject) {
-          this.contentReject('timeout')
-        }
-      }, 5000)
+  // Misc
+  showLinkDialog = (optionalTitle: string = '', optionalUrl: string = '') =>
+    this.setState({
+      linkInitialUrl: optionalUrl,
+      linkTitle: optionalTitle,
+      linkUrl: optionalUrl,
+      showLinkDialog: true,
     })
-
-  getSelectedText = () =>
-    new Promise((resolve, reject) => {
-      this.selectedTextResolve = resolve
-      this.selectedTextReject = reject
-      this.sendAction(actions.getSelectedText)
-
-      this.pendingSelectedText = setTimeout(() => {
-        if (this.selectedTextReject) {
-          this.selectedTextReject('timeout')
-        }
-      }, 5000)
-    })
-
-  setTitleFocusHandler = (callbackHandler: () => void) => {
-    this.titleFocusHandler = callbackHandler
-    return this.sendAction(actions.setTitleFocusHandler)
-  }
-
-  setContentFocusHandler = (callbackHandler: () => void) => {
-    this.contentFocusHandler = callbackHandler
-    return this.sendAction(actions.setContentFocusHandler)
-  }
-
-  addSelectedTextChangeListener = (listener: () => void) =>
-    this._selectedTextChangeListeners.push(listener)
 }
-
-const styles = StyleSheet.create({
-  modal: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  innerModal: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    paddingTop: 20,
-    paddingBottom: PlatformIOS ? 0 : 20,
-    paddingLeft: 20,
-    paddingRight: 20,
-    alignSelf: 'stretch',
-    margin: 40,
-    borderRadius: PlatformIOS ? 8 : 2,
-  },
-  button: {
-    fontSize: 16,
-    color: '#4a4a4a',
-    textAlign: 'center',
-  },
-  inputWrapper: {
-    marginTop: 5,
-    marginBottom: 10,
-    borderBottomColor: '#4a4a4a',
-    borderBottomWidth: PlatformIOS ? 1 / PixelRatio.get() : 0,
-  },
-  inputTitle: {
-    color: '#4a4a4a',
-  },
-  input: {
-    height: PlatformIOS ? 20 : 40,
-    paddingTop: 0,
-  },
-  lineSeparator: {
-    height: 1 / PixelRatio.get(),
-    backgroundColor: '#d5d5d5',
-    marginLeft: -20,
-    marginRight: -20,
-    marginTop: 20,
-  },
-})
