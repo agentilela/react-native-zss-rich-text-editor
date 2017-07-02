@@ -902,11 +902,6 @@
 				$(window).on('touchstart', function(e) {
 					zss_editor.isDragging = false;
 				});
-				$(window).on('scroll', function(e) {
-					if (zss_editor.platform === 'ios') {
-						zss_editor.updateOffset();
-					}
-				});
 
 				setupTouchEndFocus('zss_editor_title');
 				setupTouchEndFocus('zss_editor_content');
@@ -956,29 +951,7 @@
 			function replaceNewlinesWithLineBreaks(html) {
 				return html.replace(/\r?\n/g, '<br>');
 			}
-
-			zss_editor.updateOffset = function() {
-
-				if (!zss_editor.updateScrollOffset)
-					return;
-
-				var offsetY = window.document.body.scrollTop;
-
-				var footer = document.getElementById('zss_editor_footer');
-
-				var maxOffsetY = footer.offsetTop + footer.offsetHeight - zss_editor.editorHeight;
-
-				if (maxOffsetY < 0)
-					maxOffsetY = 0;
-
-				if (offsetY > maxOffsetY)
-				{
-					window.scrollTo(0, maxOffsetY);
-				}
-
-				zss_editor.setScrollPosition();
-			}
-
+			
 			// This will show up in the XCode console as we are able to push this into an NSLog.
 			zss_editor.debug = function(msg) {
 				window.postMessage(JSON.stringify({type: 'LOG', data: msg}));
