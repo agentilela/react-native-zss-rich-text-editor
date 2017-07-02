@@ -14,8 +14,9 @@
   "main": "index.js",
   "license": "SEE LICENSE IN LICENSE",
   "peerDependencies": {
-    "react": "16.0.0-alpha.12",
-    "react-native": ">=0.31.0"
+    "react-native-advanced-webview": "^0.10.3",
+    "react-native": ">=0.31.0",
+    "react": "16.0.0-alpha.12"
   },
   "devDependencies": {
     "@types/prop-types": "^15.5.1",
@@ -28,8 +29,5 @@
     "tslint-microsoft-contrib": "^5.0.1",
     "tslint-react": "^3.0.0",
     "typescript": "2.4.0"
-  },
-  "dependencies": {
-    "react-native-advanced-webview": "^0.10.3"
   }
 }
