@@ -1,5 +1,5 @@
 {
-  "name": "react-native-zss-rich-text-editor",
+  "name": "react-native-rich-text-editor",
   "scripts": {
     "build": "tsc && cp src/*.html lib/",
     "lint": "tslint --type-check --project tsconfig.json -t stylish 'src/**/*.{ts,tsx}' --fix ",
@@ -7,13 +7,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/agentilela/react-native-zss-rich-text-editor.git"
+    "url": "https://github.com/agentilela/react-native-rich-text-editor.git"
   },
-  "version": "1.0.2",
-  "description": "React Native Wrapper for ZSSRichTextEditor",
+  "version": "1.0.0",
+  "description": "Responsive Rich Text Editor for React Native. Inspired from react-native-zss-rich-text-editor, without zero dependencies and improved performance.",
   "main": "index.js",
   "license": "SEE LICENSE IN LICENSE",
-  "dependencies": {},
   "peerDependencies": {
     "react": "16.0.0-alpha.12",
     "react-native": ">=0.31.0"
@@ -25,11 +24,12 @@
     "husky": "^0.14.2",
     "lint-staged": "^4.0.0",
     "prettier": "^1.5.2",
-    "react": "16.0.0-alpha.12",
-    "react-native": "0.45.1",
     "tslint": "^5.4.3",
     "tslint-microsoft-contrib": "^5.0.1",
     "tslint-react": "^3.0.0",
     "typescript": "2.4.0"
+  },
+  "dependencies": {
+    "react-native-advanced-webview": "^0.10.3"
   }
 }

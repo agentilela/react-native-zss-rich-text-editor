@@ -13,12 +13,6 @@ export const EditorStyles = StyleSheet.create({
   buttonPlatformStyle: PlatformIOS
     ? { flex: 1, height: 45, justifyContent: 'center' }
     : {},
-  cancelButton: {
-    fontSize: 16,
-    color: '#4a4a4a',
-    paddingRight: 10,
-    textAlign: 'center',
-  },
   containerPlatformStyle: PlatformIOS
     ? {
         alignSelf: 'stretch',
@@ -27,6 +21,7 @@ export const EditorStyles = StyleSheet.create({
       }
     : { alignSelf: 'stretch', flexDirection: 'row', paddingTop: 15 },
   editorContainer: { flex: 1 },
+  editor: { backgroundColor: 'transparent' },
   innerModal: {
     alignSelf: 'stretch',
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
@@ -40,8 +35,6 @@ export const EditorStyles = StyleSheet.create({
   inputWrapper: {
     marginTop: 5,
     marginBottom: 10,
-    borderBottomColor: '#4a4a4a',
-    borderBottomWidth: PlatformIOS ? 1 / PixelRatio.get() : 0,
   },
   inputTitle: {
     color: '#4a4a4a',
@@ -76,7 +69,7 @@ export const ToolbarStyles = StyleSheet.create({
   listContainer: {
     alignItems: 'center',
     backgroundColor: '#D3D3D3',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     flexDirection: 'row',
     height: DEFAULT_BUTTON_SIZE,
     width: '100%',

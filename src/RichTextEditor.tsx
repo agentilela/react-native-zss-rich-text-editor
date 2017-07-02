@@ -1,8 +1,5 @@
 import React, { PureComponent } from 'react'
 import {
-  Dimensions,
-  EmitterSubscription,
-  Keyboard,
   Modal,
   NativeSyntheticEvent,
   Platform,
@@ -10,10 +7,10 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  WebView,
   WebViewMessageEventData,
   WebViewStatic,
 } from 'react-native'
+import AdvancedWebView from 'react-native-advanced-webview'
 import { actions, messages } from './const'
 import { EditorStyles as styles } from './styles'
 import { InjectedMessageHandler } from './WebviewMessageHandler'
@@ -43,12 +40,6 @@ interface IState {
   showLinkDialog: boolean
 }
 
-interface IKeyboardEvent {
-  endCoordinates: {
-    height: number
-  }
-}
-
 type BridgeMessage = NativeSyntheticEvent<WebViewMessageEventData>
 
 // Helpers
@@ -66,7 +57,6 @@ const upperCaseButtonTextIfNeeded = (buttonText: string) =>
 // Component
 export default class RichTextEditor extends PureComponent<IProps, IState> {
   // Event Listeners
-  _keyboardEventListeners: EmitterSubscription[]
   _selectedTextChangeListeners: ((text: string) => void)[]
 
   // Callback Handlers
@@ -95,50 +85,17 @@ export default class RichTextEditor extends PureComponent<IProps, IState> {
   constructor(props: IProps) {
     super(props)
     this.state = {
-      selectionChangeListeners: [],
-      onChange: [],
-      showLinkDialog: false,
+      keyboardHeight: 0,
       linkInitialUrl: '',
       linkTitle: '',
       linkUrl: '',
-      keyboardHeight: 0,
+      onChange: [],
+      selectionChangeListeners: [],
+      showLinkDialog: false,
     }
-  }
-
-  componentWillMount() {
-    if (PlatformIOS) {
-      this._keyboardEventListeners = [
-        Keyboard.addListener('keyboardWillShow', this.handleKeyboardWillShow),
-        Keyboard.addListener('keyboardWillHide', this.handleKeyboardWillHide),
-      ]
-    } else {
-      this._keyboardEventListeners = [
-        Keyboard.addListener('keyboardDidShow', this.handleKeyboardWillShow),
-        Keyboard.addListener('keyboardDidHide', this.handleKeyboardWillHide),
-      ]
-    }
-  }
-
-  componentWillUnmount() {
-    this._keyboardEventListeners.forEach(eventListener =>
-      eventListener.remove()
-    )
   }
 
   captureWebviewRef = (c: WebViewStatic) => (this.webviewBridge = c)
-
-  handleKeyboardWillHide = (event: IKeyboardEvent) =>
-    this.setState({ keyboardHeight: 0 })
-
-  handleKeyboardWillShow = (event: IKeyboardEvent) => {
-    const newKeyboardHeight = event.endCoordinates.height
-    if (this.state.keyboardHeight === newKeyboardHeight) {
-      return
-    }
-    return this.setState({ keyboardHeight: newKeyboardHeight }, () =>
-      this.setEditorAvailableHeightBasedOnKeyboardHeight(newKeyboardHeight)
-    )
-  }
 
   onBridgeMessage = (incomingMessage: BridgeMessage) => {
     const { data } = incomingMessage.nativeEvent
@@ -378,23 +335,6 @@ export default class RichTextEditor extends PureComponent<IProps, IState> {
   sendAction = (action: string, data?: string | number | {}) =>
     this.webviewBridge.postMessage(JSON.stringify({ type: action, data }))
 
-  setEditorAvailableHeightBasedOnKeyboardHeight = (keyboardHeight: number) => {
-    const { contentInset, style } = this.props
-    let spacing = 0
-    if (contentInset) {
-      const { top, bottom } = contentInset
-      spacing += (top || 0) + (bottom || 0)
-    }
-    if (style) {
-      const { marginTop, marginBottom } = style
-      spacing += (marginTop || 0) + (marginBottom || 0)
-    }
-
-    this.setEditorHeight(
-      Dimensions.get('window').height - keyboardHeight - spacing
-    )
-  }
-
   render() {
     //in release build, external html files in Android can't be required, so they must be placed in the assets folder and accessed via uri
     const pageSource = PlatformIOS
@@ -403,13 +343,15 @@ export default class RichTextEditor extends PureComponent<IProps, IState> {
     const linkModal = this.renderLinkModal()
     return (
       <View style={styles.editorContainer}>
-        <WebView
-          javaScriptEnabled
+        <AdvancedWebView
+          hideAccessory
           injectedJavaScript={injectScript}
+          javaScriptEnabled
           onLoad={this.init}
           onMessage={this.onBridgeMessage}
           ref={this.captureWebviewRef}
           source={pageSource}
+          style={styles.editor}
           {...this.props}
         />
         {linkModal}
